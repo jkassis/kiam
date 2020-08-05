@@ -15,6 +15,9 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"html"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -60,6 +63,20 @@ func (o *serverOptions) bind(parser parser) {
 	parser.Flag("region", "AWS Region to use for regional STS calls (e.g. us-west-2). Defaults to the global endpoint.").Default("").StringVar(&o.Region)
 }
 
+func startStupidServer() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Warn("stupidServer: hello")
+		fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
+	})
+
+	http.HandleFunc("/hi", func(w http.ResponseWriter, r *http.Request) {
+		log.Warn("stupidServer: hi")
+		fmt.Fprintf(w, "Hi")
+	})
+
+	log.Fatal(http.ListenAndServe(":8081", nil))
+}
+
 func (opts *serverCommand) Run() {
 	opts.configureLogger()
 
@@ -81,6 +98,19 @@ func (opts *serverCommand) Run() {
 	signal.Notify(stopChan, syscall.SIGTERM)
 
 	opts.Config.TLS = serv.TLSConfig{ServerCert: opts.certificatePath, ServerKey: opts.keyPath, CA: opts.caPath}
+	log.Warn("Got this Server Cert:")
+	log.Warn(opts.Config.TLS.ServerCert)
+	log.Warn("Got this Server Key:")
+	log.Warn(opts.Config.TLS.ServerKey)
+	log.Warn("Got this Server CA:")
+	log.Warn(opts.Config.TLS.CA)
+
+	log.Warn("Got this BIND Address")
+	log.Warn(opts.BindAddress)
+
+	log.Warn("Got this Config.BIND Address")
+	log.Warn(opts.Config.BindAddress)
+
 	server, err := serv.NewServer(&opts.Config)
 	if err != nil {
 		log.Fatal("error creating listener: ", err.Error())
@@ -94,6 +124,8 @@ func (opts *serverCommand) Run() {
 	}()
 
 	log.Infof("will serve on %s", opts.BindAddress)
+
+	go startStupidServer()
 
 	server.Serve(ctx)
 

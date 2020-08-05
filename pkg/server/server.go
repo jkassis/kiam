@@ -91,6 +91,7 @@ func simplifyAWSErrorMessage(err error) string {
 // GetPodCredentials returns credentials for the Pod, according to the role it's
 // annotated with. It will additionally check policy before returning credentials.
 func (k *KiamServer) GetPodCredentials(ctx context.Context, req *pb.GetPodCredentialsRequest) (*pb.Credentials, error) {
+	log.Info("GetPodCredentials: starting")
 	if statsd.Enabled {
 		defer statsd.Client.NewTiming().Send("server.rpc.GetRoleCredentials")
 	}
@@ -129,6 +130,7 @@ func (k *KiamServer) GetPodCredentials(ctx context.Context, req *pb.GetPodCreden
 // IsAllowedAssumeRole checks policy to ensure the role can be assumed. Deprecated and will
 // be removed in a future release.
 func (k *KiamServer) IsAllowedAssumeRole(ctx context.Context, req *pb.IsAllowedAssumeRoleRequest) (*pb.IsAllowedAssumeRoleResponse, error) {
+	log.Info("isAllowedAssumeRole: starting")
 	if statsd.Enabled {
 		defer statsd.Client.NewTiming().Send("server.rpc.IsAllowedAssumeRole")
 	}
@@ -147,6 +149,7 @@ func (k *KiamServer) IsAllowedAssumeRole(ctx context.Context, req *pb.IsAllowedA
 
 // GetHealth returns ok to allow a command to ensure the sever is operating well
 func (k *KiamServer) GetHealth(ctx context.Context, _ *pb.GetHealthRequest) (*pb.HealthStatus, error) {
+	log.Info("GetHealth: starting")
 	if statsd.Enabled {
 		defer statsd.Client.NewTiming().Send("server.rpc.GetHealth")
 	}
@@ -155,6 +158,7 @@ func (k *KiamServer) GetHealth(ctx context.Context, _ *pb.GetHealthRequest) (*pb
 
 // GetPodRole determines which role a Pod is annotated with
 func (k *KiamServer) GetPodRole(ctx context.Context, req *pb.GetPodRoleRequest) (*pb.Role, error) {
+	log.Info("GetPodRole: starting")
 	if statsd.Enabled {
 		defer statsd.Client.NewTiming().Send("server.rpc.GetPodRole")
 	}
@@ -186,6 +190,7 @@ func translateCredentialsToProto(credentials *sts.Credentials) *pb.Credentials {
 // GetRoleCredentials returns the credentials for the role. Deprecated and will be
 // removed in a future release.
 func (k *KiamServer) GetRoleCredentials(ctx context.Context, req *pb.GetRoleCredentialsRequest) (*pb.Credentials, error) {
+	log.Info("GetRoleCredentials: starting")
 	if statsd.Enabled {
 		defer statsd.Client.NewTiming().Send("server.rpc.GetRoleCredentials")
 	}
@@ -270,6 +275,7 @@ func NewServer(config *Config) (_ *KiamServer, err error) {
 		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
 	)
 
+	log.Warnf("NewServer: Listening on %s", config.BindAddress)
 	listener, err := net.Listen("tcp", config.BindAddress)
 	if err != nil {
 		return nil, err
@@ -304,7 +310,10 @@ func (k *KiamServer) Serve(ctx context.Context) {
 	if err != nil {
 		log.Fatalf("error starting namespace cache: %s", err)
 	}
+
+	log.Warnf("NewServer: Serve: Starting GRPC")
 	k.server.Serve(k.listener)
+	log.Warnf("NewServer: Ending GRPC")
 }
 
 // Stop performs a graceful shutdown of the gRPC server
